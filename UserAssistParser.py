@@ -31,7 +31,8 @@ def get_key(file):
     :param file: path to NTUSER.dat hive file
     :return: decoded programs and data dict
     """
-    pd_list = []  # list to hold dicts of decoded programs/data
+    # list to hold dicts of decoded programs/data
+    pd_list = []
     try:
         reg_hive = Registry.Registry(str(file))
     except Registry.RegistryParse.ParseException:
@@ -49,7 +50,8 @@ def get_key(file):
                     print(f'[+] Found GUID with values: {guid.name()}')
                     print('[+] Parsing values...')
                     for value in guid.subkey('Count').values():
-                        pd_dict = {}  # dict to hold decoded programs and data
+                        # dict to hold decoded programs and data
+                        pd_dict = {}
                         program = resolve_guid(codecs.encode(value.name(), 'rot-13'))
                         parsed_data = raw_data_parser(value.value())
                         # dict contains program name: run count, focus count, focus time, last executed
@@ -57,7 +59,7 @@ def get_key(file):
                         pd_list.append(pd_dict)
         return pd_list
     else:
-        print(f'\n{ntuser_path.name} is not an NTUSER.DAT file')
+        print(f'\n{ntuser_path.name} is not a NTUSER.DAT file')
 
 
 def raw_data_parser(data):
@@ -68,7 +70,8 @@ def raw_data_parser(data):
     """
     ua_data = []
 
-    if len(data) == 16:  # WinXP
+    # WinXP
+    if len(data) == 16:
         # little-endian DWORD
         run_count = struct.unpack("<I", data[4:8])[0]
         # run count starts at 5
@@ -79,12 +82,13 @@ def raw_data_parser(data):
         ft = struct.unpack("<Q", data[8:])[0]
 
         if not ft:
-            last_executed = ''  # no last run recorded
+            last_executed = ''
         else:
             last_executed = convert_filetime(ft)
         ua_data.extend([run_count, focus_count, focus_time, last_executed])
 
-    elif len(data) == 72:  # Win7+
+    # Win7+
+    elif len(data) == 72:
         # little-endian DWORD
         run_count = struct.unpack("<I", data[4:8])[0]
         # little-endian DWORD
@@ -95,7 +99,7 @@ def raw_data_parser(data):
         ft = struct.unpack("<Q", data[60:68])[0]
 
         if not ft:
-            last_executed = ''  # no last run recorded
+            last_executed = ''
         else:
             last_executed = convert_filetime(ft)
         ua_data.extend([run_count, focus_count, focus_time, last_executed])
