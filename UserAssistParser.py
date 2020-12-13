@@ -29,7 +29,7 @@ def get_key(file):
     """
     yank programs and data from UA Count keys
     :param file: path ntuser hive file
-    :return: decoded programs and raw data dict
+    :return: decoded programs and data dict
     """
     prog_and_data = {}  # holds program names and data
     try:
