@@ -28,10 +28,10 @@ def convert_filetime(ft):
 def get_key(file):
     """
     yank programs and data from UA Count keys
-    :param file: path ntuser hive file
+    :param file: path to NTUSER.dat hive file
     :return: decoded programs and data dict
     """
-    prog_and_data = {}  # holds program names and data
+    pd_list = []  # list to hold dicts of decoded programs/data
     try:
         reg_hive = Registry.Registry(str(file))
     except Registry.RegistryParse.ParseException:
@@ -49,11 +49,13 @@ def get_key(file):
                     print(f'[+] Found GUID with values: {guid.name()}')
                     print('[+] Parsing values...')
                     for value in guid.subkey('Count').values():
+                        pd_dict = {}  # dict to hold decoded programs and data
                         program = resolve_guid(codecs.encode(value.name(), 'rot-13'))
                         parsed_data = raw_data_parser(value.value())
                         # dict contains program name: run count, focus count, focus time, last executed
-                        prog_and_data[program] = parsed_data
-        return prog_and_data  #
+                        pd_dict[program] = parsed_data
+                        pd_list.append(pd_dict)
+        return pd_list
     else:
         print(f'\n{ntuser_path.name} is not an NTUSER.DAT file')
 
@@ -67,11 +69,14 @@ def raw_data_parser(data):
     ua_data = []
 
     if len(data) == 16:  # WinXP
-        run_count = struct.unpack("<I", data[4:8])[0]  # little-endian DWORD
-        run_count -= 5  # run count starts at 5
+        # little-endian DWORD
+        run_count = struct.unpack("<I", data[4:8])[0]
+        # run count starts at 5
+        run_count -= 5
         focus_count = ''
         focus_time = ''
-        ft = struct.unpack("<Q", data[8:])[0]  # filetime for last executed. little-endian QWORD
+        # last executed in FILETIME. little-endian QWORD
+        ft = struct.unpack("<Q", data[8:])[0]
 
         if not ft:
             last_executed = ''  # no last run recorded
@@ -80,10 +85,14 @@ def raw_data_parser(data):
         ua_data.extend([run_count, focus_count, focus_time, last_executed])
 
     elif len(data) == 72:  # Win7+
-        run_count = struct.unpack("<I", data[4:8])[0]  # little-endian DWORD
-        focus_count = struct.unpack("<I", data[8:12])[0]  # little-endian DWORD
-        focus_time = str(timedelta(milliseconds=struct.unpack("<I", data[12:16])[0])).split('.')[0]  # milliseconds
-        ft = struct.unpack("<Q", data[60:68])[0]  # filetime for last executed. little-endian QWORD
+        # little-endian DWORD
+        run_count = struct.unpack("<I", data[4:8])[0]
+        # little-endian DWORD
+        focus_count = struct.unpack("<I", data[8:12])[0]
+        # little-endian DWORD. focus time in milliseconds
+        focus_time = str(timedelta(milliseconds=struct.unpack("<I", data[12:16])[0])).split('.')[0]
+        # last executed in FILETIME. little-endian QWORD
+        ft = struct.unpack("<Q", data[60:68])[0]
 
         if not ft:
             last_executed = ''  # no last run recorded
@@ -101,7 +110,7 @@ def resolve_guid(program):
     :return: program path w/ resolved folders
     """
     for key, val in folder_guids.items():
-        if key in program:
+        if key == program.split('\\')[0]:
             resolved = program.replace(key, val)
             return resolved
         else:
@@ -109,10 +118,10 @@ def resolve_guid(program):
     return program
 
 
-def write_output(ua_dict, out_path):
+def write_output(ua_list, out_path):
     """
     Write CSV output
-    :param ua_dict: UA dictionary w/ program names and data
+    :param ua_list: list of dicts containing decoded programs and parsed data
     :param out_path: output path to write CSV
     :return: nothing
     """
@@ -126,14 +135,13 @@ def write_output(ua_dict, out_path):
     with out_file.open('w', newline='') as fh:
         write_csv = csv.writer(fh)
         write_csv.writerow(header)
-
-        for key, val in ua_dict.items():
-            if key == 'UEME_CTLSESSION':  # Session ID. doesn't contain info on executed programs
-                pass
-            else:
-                row = [key, val[0], val[1], val[2], val[3]]
-                write_csv.writerow(row)
-
+        for program in ua_list:
+            for key, val in program.items():
+                if not val:
+                    pass
+                else:
+                    row = [key, val[0], val[1], val[2], val[3]]
+                    write_csv.writerow(row)
     print(f'[+] Output written to {out_file}')
 
 
