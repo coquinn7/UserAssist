@@ -72,13 +72,12 @@ def raw_data_parser(data):
 
     # WinXP
     if len(data) == 16:
-        # little-endian DWORD
         run_count = struct.unpack("<I", data[4:8])[0]
         # run count starts at 5
         run_count -= 5
         focus_count = ''
         focus_time = ''
-        # last executed in FILETIME. little-endian QWORD
+        # last executed in FILETIME
         ft = struct.unpack("<Q", data[8:])[0]
 
         if not ft:
@@ -89,13 +88,11 @@ def raw_data_parser(data):
 
     # Win7+
     elif len(data) == 72:
-        # little-endian DWORD
         run_count = struct.unpack("<I", data[4:8])[0]
-        # little-endian DWORD
         focus_count = struct.unpack("<I", data[8:12])[0]
-        # little-endian DWORD. focus time in milliseconds
+        # focus time in milliseconds
         focus_time = str(timedelta(milliseconds=struct.unpack("<I", data[12:16])[0])).split('.')[0]
-        # last executed in FILETIME. little-endian QWORD
+        # last executed in FILETIME
         ft = struct.unpack("<Q", data[60:68])[0]
 
         if not ft:
