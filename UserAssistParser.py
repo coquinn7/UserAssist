@@ -1,11 +1,13 @@
+import argparse
+import codecs
+import csv
+import struct
+import sys
+
+from datetime import datetime, timedelta
 from Registry import Registry
 from pathlib import Path
-import codecs
-import argparse
-import struct
-from datetime import datetime, timedelta
-import csv
-import sys
+
 from lib.known_folders import folder_guids
 
 examples = '''
